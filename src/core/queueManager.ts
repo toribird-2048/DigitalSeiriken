@@ -74,6 +74,16 @@ export class QueueManager {
     const callingTicket = this.tickets.find((t) => t.status === "calling");
     return { waitingCount, callingTicket };
   }
+
+  public getMyStatus(id: string) {
+    const myTicket = this.tickets.find((t) => t.id === id);
+    if (!myTicket) return null;
+    return myTicket;
+  }
+
+  public getTicketByID(id: string) {
+    return this.tickets.find((t) => t.id === id);
+  }
 }
 
 const globalForQueue = global as unknown as { queueManager: QueueManager };

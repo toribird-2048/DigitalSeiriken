@@ -2,29 +2,26 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Ticket } from "@/src/core/queueManager";
 
+  const STORAGE_KEY = "digital-seiriken-ticket";
+
 export default function MainPage() {
   const [myTicket, setMyTicket] = useState<Ticket | null>(null);
   const [waitingCount, setWaitingCount] = useState<number>(0);
   const [callingNumber, setCallingNumber] = useState<number | null>(null);
 
-  const STORAGE_KEY = "digital-seiriken-ticket";
-
   const fetchStatus = useCallback(async () => {
-    try {
-      const res = await fetch("/api/status", { method: "GET" });
-      if (res.ok) {
-        const data = await res.json();
-        setWaitingCount(data.waitingCount);
-        if (data.callingTicket) {
-          setCallingNumber(data.callingTicket.number);
-        } else {
-          setCallingNumber(null);
+      try {
+        const res = await fetch("/api/status");
+        if (res.ok) {
+          const data = await res.json();
+          setWaitingCount(data.waitingCount);
+          const currentCallingTicket = data.callingTicket?.number;
+          setCallingNumber(currentCallingTicket);
         }
+      } catch (error) {
+        console.error("Failed to fetch status:", error);
       }
-    } catch (error) {
-      console.error("Failed to fetch status:", error);
-    }
-  }, []);
+    }, []);
 
   const handleGetTicket = async () => {
     try {
@@ -41,23 +38,59 @@ export default function MainPage() {
   };
 
   useEffect(() => {
-    const savedTicketString = localStorage.getItem(STORAGE_KEY)
-    if (savedTicketString) {
-      try {
-        const savedTicket: Ticket = JSON.parse(savedTicketString);
-        setMyTicket(savedTicket)
-      } catch(e) {
-        localStorage.removeItem(STORAGE_KEY)
-      }
-    }
     fetchStatus();
     const interval = setInterval(fetchStatus, 3000);
     return () => clearInterval(interval);
   }, [fetchStatus]);
 
+  useEffect(() => {
+    if (!myTicket || callingNumber === null) return;
+
+    const isMyTurn = myTicket.number === callingNumber;
+    const isAleadyCalling = myTicket.status === "calling";
+
+    if (!isMyTurn && !isAleadyCalling) return;
+
+    const checkMyTicketStatus = async () => {
+      try {
+        const res = await fetch(`/api/ticket/${myTicket.id}`);
+        if (res.ok) {
+          const latestTicket: Ticket = await res.json();
+
+          if (latestTicket.status === "completed") {
+            localStorage.removeItem(STORAGE_KEY);
+            setMyTicket(null);
+            setCallingNumber(null);
+            console.log("aaaaaaaaaaaaa")
+          } else {
+            setMyTicket(latestTicket);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(latestTicket));
+          }
+        }
+      } catch (error) {
+        console.error("Failed to check my ticket:", error);
+      }
+    };
+
+    checkMyTicketStatus();
+  }, [callingNumber, myTicket?.id, myTicket?.number, myTicket?.status]);
+
+  useEffect(() => {
+    const savedTicketString = localStorage.getItem(STORAGE_KEY);
+    if (savedTicketString) {
+      try {
+        const savedTicket: Ticket = JSON.parse(savedTicketString);
+        setMyTicket(savedTicket);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+  }, []);
+
+  console.log(myTicket);
   if (myTicket) {
 
-    const isMyTurn = callingNumber === myTicket.number;
+    const isMyTurn = callingNumber && callingNumber === myTicket.number;
 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
