@@ -7,6 +7,8 @@ export default function MainPage() {
   const [waitingCount, setWaitingCount] = useState<number>(0);
   const [callingNumber, setCallingNumber] = useState<number | null>(null);
 
+  const STORAGE_KEY = "digital-seiriken-ticket";
+
   const fetchStatus = useCallback(async () => {
     try {
       const res = await fetch("/api/status", { method: "GET" });
@@ -30,6 +32,7 @@ export default function MainPage() {
       if (res.ok) {
         const ticket: Ticket = await res.json();
         setMyTicket(ticket);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(ticket))
         fetchStatus();
       }
     } catch (error) {
@@ -38,6 +41,15 @@ export default function MainPage() {
   };
 
   useEffect(() => {
+    const savedTicketString = localStorage.getItem(STORAGE_KEY)
+    if (savedTicketString) {
+      try {
+        const savedTicket: Ticket = JSON.parse(savedTicketString);
+        setMyTicket(savedTicket)
+      } catch(e) {
+        localStorage.removeItem(STORAGE_KEY)
+      }
+    }
     fetchStatus();
     const interval = setInterval(fetchStatus, 3000);
     return () => clearInterval(interval);
