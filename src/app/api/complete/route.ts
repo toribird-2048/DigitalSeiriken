@@ -9,7 +9,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "ID is required" }, { status: 400 });
   }
 
-  const success = queueManager.complete(id);
+  const success = await queueManager.complete(id);
 
   if (success) {
     return NextResponse.json({ message: "Completed successfully"});
