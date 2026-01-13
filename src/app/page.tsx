@@ -18,6 +18,10 @@ export default function MainPage() {
           setWaitingCount(data.waitingCount);
           const currentCallingTicket = data.callingTicket?.number;
           setCallingNumber(currentCallingTicket);
+
+          if (data.lastUpdated) {
+            setLastUpdated(data.lastUpdated);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch status:", error);
