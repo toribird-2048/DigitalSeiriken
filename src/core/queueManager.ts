@@ -1,4 +1,4 @@
-import { createClient, RedisClientType } from "redis";
+import { kv } from "@vercel/kv";
 import { randomUUID } from "node:crypto";
 
 export type TicketStatus = "waiting" | "calling" | "completed";
@@ -13,36 +13,15 @@ export type Ticket = {
 const KEY_TICKETS = "queue:tickets";
 const KEY_NEXT_NUMBER = "queue:next_number";
 
-let redisClient: RedisClientType | undefined;
-
-async function getRedisClient() {
-  if (!redisClient) {
-    redisClient = createClient({
-      url: process.env.REDIS_URL,
-    });
-    
-    redisClient.on('error', (err) => console.error('Redis Client Error', err));
-    
-    await redisClient.connect();
-  }
-  return redisClient;
-}
 
 export class QueueManager {
   private async getAllTickets(): Promise<Ticket[]> {
-    const client = await getRedisClient();
-    const ticketsJson = await client.lRange(KEY_TICKETS, 0, -1);
+    const tickets = await kv.lrange<Ticket>(KEY_TICKETS, 0, -1);
 
-    return ticketsJson.map(str => {
-      const t = JSON.parse(str);
-      return { ...t, createdAt: new Date(t.createdAt) };
-    });
-  }
-
-  private async updateTicketAtIndex(index: number, ticket: Ticket) {
-    const client = await getRedisClient();
-    // LSET key index value
-    await client.lSet(KEY_TICKETS, index, JSON.stringify(ticket));
+    return tickets.map( t=> ({
+      ...t,
+      createdAt: new Date(t.createdAt),
+    }));
   }
 
   /**
@@ -50,10 +29,7 @@ export class QueueManager {
    * @ returns 発行されたチケット
    */
   public async enqueue(): Promise<Ticket> {
-    const client = await getRedisClient();
-    console.log("Redis connected");
-    const number = await client.incr(KEY_NEXT_NUMBER);
-    console.log("Generated Number:", number, "Type:", typeof number); 
+    const number = await kv.incr(KEY_NEXT_NUMBER);
 
     const newTicket: Ticket = {
       id: randomUUID(),
@@ -61,9 +37,8 @@ export class QueueManager {
       status: "waiting",
       createdAt: new Date(),
     };
-    console.log("New Ticket Object:", JSON.stringify(newTicket)); 
-    
-    await client.rPush(KEY_TICKETS, JSON.stringify(newTicket));
+
+    await kv.rpush(KEY_TICKETS, newTicket);
     return newTicket;
   }
 
@@ -90,7 +65,7 @@ export class QueueManager {
     targetTicket.status = 'calling';
 
     // Redis更新
-    await this.updateTicketAtIndex(waitingIndex, targetTicket);
+    await kv.lset(KEY_TICKETS, waitingIndex, targetTicket);
 
     return targetTicket;
   }
@@ -111,7 +86,7 @@ export class QueueManager {
 
     ticket.status = "completed";
 
-    await this.updateTicketAtIndex(index, ticket);
+    await kv.lset(KEY_TICKETS, index, ticket);
 
     return true;
   }
