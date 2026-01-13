@@ -1,6 +1,5 @@
 import { createClient, RedisClientType } from "redis";
 import { randomUUID } from "node:crypto";
-import { get } from "node:http";
 
 export type TicketStatus = "waiting" | "calling" | "completed";
 
@@ -52,7 +51,9 @@ export class QueueManager {
    */
   public async enqueue(): Promise<Ticket> {
     const client = await getRedisClient();
+    console.log("Redis connected");
     const number = await client.incr(KEY_NEXT_NUMBER);
+    console.log("Generated Number:", number, "Type:", typeof number); 
 
     const newTicket: Ticket = {
       id: randomUUID(),
@@ -60,6 +61,8 @@ export class QueueManager {
       status: "waiting",
       createdAt: new Date(),
     };
+    console.log("New Ticket Object:", JSON.stringify(newTicket)); 
+    
     await client.rPush(KEY_TICKETS, JSON.stringify(newTicket));
     return newTicket;
   }
