@@ -8,7 +8,7 @@ export async function GET(
     const params = await props.params;
     const id = params.id;
     
-    const ticket = queueManager.getTicketByID(id);
+    const ticket = await queueManager.getTicketByID(id);
     
     if (ticket) {
         return NextResponse.json(ticket);

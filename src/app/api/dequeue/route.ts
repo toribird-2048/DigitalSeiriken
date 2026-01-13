@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { queueManager } from "@/src/core/queueManager";
 
 export async function POST() {
-  const dequeuedTicket = queueManager.dequeue();
+  const dequeuedTicket = await queueManager.dequeue();
   if (dequeuedTicket) {
     return NextResponse.json({ ticket: dequeuedTicket });
   }

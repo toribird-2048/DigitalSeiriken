@@ -29,17 +29,25 @@ export class QueueManager {
    * @ returns 発行されたチケット
    */
   public async enqueue(): Promise<Ticket> {
-    const number = await kv.incr(KEY_NEXT_NUMBER);
+    try {
+      const number = await kv.incr(KEY_NEXT_NUMBER);
 
-    const newTicket: Ticket = {
-      id: randomUUID(),
-      number: number,
-      status: "waiting",
-      createdAt: new Date(),
-    };
+      const newTicket: Ticket = {
+        id: randomUUID(),
+        number: number,
+        status: "waiting",
+        createdAt: new Date(),
+      };
 
-    await kv.rpush(KEY_TICKETS, newTicket);
-    return newTicket;
+      await kv.rpush(KEY_TICKETS, newTicket);
+
+      console.log(`[QueueManager] Ticket issued: #${number} (ID: ${newTicket.id})`);
+
+      return newTicket;
+    } catch (error) {
+      console.error("!!! Enqueue Error !!!", error);
+      throw error;
+    }
   }
 
   /**
@@ -98,9 +106,9 @@ export class QueueManager {
     const tickets = await this.getAllTickets();
 
     const waitingCount = tickets.filter(t => t.status === "waiting").length;
-    const callingTickets = tickets.filter(t => t.status === "calling");
+    const callingTicket = tickets.find(t => t.status === "calling");
 
-    return { waitingCount, callingTickets };
+    return { waitingCount, callingTicket };
   }
 
   public async getTicketByID(id: string): Promise<Ticket | undefined> {

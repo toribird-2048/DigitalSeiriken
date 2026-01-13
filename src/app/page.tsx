@@ -44,12 +44,15 @@ export default function MainPage() {
   }, [fetchStatus]);
 
   useEffect(() => {
-    if (!myTicket || callingNumber === null) return;
+    if (!myTicket) return;
 
-    const isMyTurn = myTicket.number === callingNumber;
-    const isAleadyCalling = myTicket.status === "calling";
+    const shouldCheck = 
+      (callingNumber === myTicket.number) ||
+      (myTicket.status === "calling") ||
+      (callingNumber !== null && callingNumber > myTicket.number) ||
+      (callingNumber === null);
 
-    if (!isMyTurn && !isAleadyCalling) return;
+    if (!shouldCheck) return;
 
     const checkMyTicketStatus = async () => {
       try {
@@ -61,7 +64,6 @@ export default function MainPage() {
             localStorage.removeItem(STORAGE_KEY);
             setMyTicket(null);
             setCallingNumber(null);
-            console.log("aaaaaaaaaaaaa")
           } else {
             setMyTicket(latestTicket);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(latestTicket));
@@ -73,7 +75,7 @@ export default function MainPage() {
     };
 
     checkMyTicketStatus();
-  }, [callingNumber, myTicket?.id, myTicket?.number, myTicket?.status]);
+  }, [callingNumber, myTicket?.id, myTicket?.number, myTicket?.status, waitingCount]);
 
   useEffect(() => {
     const savedTicketString = localStorage.getItem(STORAGE_KEY);
@@ -87,7 +89,6 @@ export default function MainPage() {
     }
   }, []);
 
-  console.log(myTicket);
   if (myTicket) {
 
     const isMyTurn = callingNumber && callingNumber === myTicket.number;

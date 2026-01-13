@@ -11,16 +11,16 @@ export default function AdminPage() {
     if (res.ok) {
       const data = await res.json();
       setWaitingCount(data.waitingCount);
-      setCurrentTicket(data.callingTicket || null);
-    }
-  }, []);
+      setCurrentTicket(data.callingTicket);
+      }
+    }, []);
 
   const handleCallNext = async () => {
     const res = await fetch("/api/dequeue", { method: "POST" });
     if (res.ok) {
       const data = await res.json();
       if (data.ticket) {
-        setCurrentTicket(data.ticket);
+        setCurrentTicket(data.callingTicket);
       fetchStatus();
       }
     } else {
