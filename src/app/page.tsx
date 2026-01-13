@@ -8,6 +8,7 @@ export default function MainPage() {
   const [myTicket, setMyTicket] = useState<Ticket | null>(null);
   const [waitingCount, setWaitingCount] = useState<number>(0);
   const [callingNumber, setCallingNumber] = useState<number | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<number>(0);
 
   const fetchStatus = useCallback(async () => {
       try {
@@ -75,7 +76,7 @@ export default function MainPage() {
     };
 
     checkMyTicketStatus();
-  }, [callingNumber, myTicket?.id, myTicket?.number, myTicket?.status, waitingCount]);
+  }, [callingNumber, myTicket?.id, myTicket?.number, myTicket?.status, waitingCount, lastUpdated]);
 
   useEffect(() => {
     const savedTicketString = localStorage.getItem(STORAGE_KEY);

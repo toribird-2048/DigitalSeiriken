@@ -12,7 +12,7 @@ export type Ticket = {
 
 const KEY_TICKETS = "queue:tickets";
 const KEY_NEXT_NUMBER = "queue:next_number";
-
+const KEY_LAST_UPDATED = "queue:last_updated";
 
 export class QueueManager {
   private async getAllTickets(): Promise<Ticket[]> {
@@ -22,6 +22,10 @@ export class QueueManager {
       ...t,
       createdAt: new Date(t.createdAt),
     }));
+  }
+
+  private async touchLastUpdated() {
+    await kv.set(KEY_LAST_UPDATED, Date.now());
   }
 
   /**
@@ -40,6 +44,8 @@ export class QueueManager {
       };
 
       await kv.rpush(KEY_TICKETS, newTicket);
+
+      await this.touchLastUpdated();
 
       console.log(`[QueueManager] Ticket issued: #${number} (ID: ${newTicket.id})`);
 
@@ -75,6 +81,8 @@ export class QueueManager {
     // Redis更新
     await kv.lset(KEY_TICKETS, waitingIndex, targetTicket);
 
+    await this.touchLastUpdated();
+
     return targetTicket;
   }
 
@@ -107,8 +115,9 @@ export class QueueManager {
 
     const waitingCount = tickets.filter(t => t.status === "waiting").length;
     const callingTicket = tickets.find(t => t.status === "calling");
+    const lastUpdated = await kv.get<number>(KEY_LAST_UPDATED) || 0;
 
-    return { waitingCount, callingTicket };
+    return { waitingCount, callingTicket, lastUpdated };
   }
 
   public async getTicketByID(id: string): Promise<Ticket | undefined> {
