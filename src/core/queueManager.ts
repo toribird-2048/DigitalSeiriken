@@ -14,6 +14,8 @@ const KEY_TICKETS = "queue:tickets";
 const KEY_NEXT_NUMBER = "queue:next_number";
 const KEY_LAST_UPDATED = "queue:last_updated";
 
+const MAX_CALLING_TICKETS = 4;
+
 export class QueueManager {
   private async getAllTickets(): Promise<Ticket[]> {
     const tickets = await kv.lrange<Ticket>(KEY_TICKETS, 0, -1);
@@ -63,8 +65,8 @@ export class QueueManager {
   public async dequeue(): Promise<Ticket | undefined> {
     const tickets = await this.getAllTickets();
 
-    const currentCalling = tickets.find(t => t.status === 'calling');
-    if (currentCalling) {
+    const currentCallingCount = tickets.filter(t => t.status === 'calling').length;
+    if (currentCallingCount > MAX_CALLING_TICKETS) {
       return undefined; 
     }
 
@@ -114,10 +116,10 @@ export class QueueManager {
     const tickets = await this.getAllTickets();
 
     const waitingCount = tickets.filter(t => t.status === "waiting").length;
-    const callingTicket = tickets.find(t => t.status === "calling");
+    const callingTickets = tickets.filter(t => t.status === "calling");
     const lastUpdated = await kv.get<number>(KEY_LAST_UPDATED) || 0;
 
-    return { waitingCount, callingTicket, lastUpdated };
+    return { waitingCount, callingTickets, lastUpdated };
   }
 
   public async getTicketByID(id: string): Promise<Ticket | undefined> {

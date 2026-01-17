@@ -7,7 +7,7 @@ import { Ticket } from "@/src/core/queueManager";
 export default function MainPage() {
   const [myTicket, setMyTicket] = useState<Ticket | null>(null);
   const [waitingCount, setWaitingCount] = useState<number>(0);
-  const [callingNumber, setCallingNumber] = useState<number | null>(null);
+  const [callingNumbers, setCallingNumbers] = useState<number[]>([]);
   const [lastUpdated, setLastUpdated] = useState<number>(0);
 
   const fetchStatus = useCallback(async () => {
@@ -16,9 +16,8 @@ export default function MainPage() {
         if (res.ok) {
           const data = await res.json();
           setWaitingCount(data.waitingCount);
-          const currentCallingTicket = data.callingTicket?.number;
-          setCallingNumber(currentCallingTicket);
-
+          const numbers = (data.callingTickets || []).map((t: Ticket) => t.number);
+          setCallingNumbers(numbers);
           if (data.lastUpdated) {
             setLastUpdated(data.lastUpdated);
           }
@@ -52,10 +51,10 @@ export default function MainPage() {
     if (!myTicket) return;
 
     const shouldCheck = 
-      (callingNumber === myTicket.number) ||
+      (callingNumbers.includes(myTicket.number)) ||
       (myTicket.status === "calling") ||
-      (callingNumber !== null && callingNumber > myTicket.number) ||
-      (callingNumber === null);
+      (callingNumbers.length !== 0 && Math.min(...callingNumbers) > myTicket.number) ||
+      (callingNumbers.length === 0);
 
     if (!shouldCheck) return;
 
@@ -68,7 +67,7 @@ export default function MainPage() {
           if (latestTicket.status === "completed") {
             localStorage.removeItem(STORAGE_KEY);
             setMyTicket(null);
-            setCallingNumber(null);
+            callingNumbers.splice(callingNumbers.indexOf(myTicket.number), 1);
           } else {
             setMyTicket(latestTicket);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(latestTicket));
@@ -80,7 +79,7 @@ export default function MainPage() {
     };
 
     checkMyTicketStatus();
-  }, [callingNumber, myTicket?.id, myTicket?.number, myTicket?.status, waitingCount, lastUpdated]);
+  }, [callingNumbers, myTicket?.id, myTicket?.number, myTicket?.status, waitingCount, lastUpdated]);
 
   useEffect(() => {
     const savedTicketString = localStorage.getItem(STORAGE_KEY);
@@ -96,7 +95,7 @@ export default function MainPage() {
 
   if (myTicket) {
 
-    const isMyTurn = callingNumber && callingNumber === myTicket.number;
+    const isMyTurn = callingNumbers.length > 0 && callingNumbers.includes;
 
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
@@ -109,7 +108,7 @@ export default function MainPage() {
           <div className="bg-gray-100 rounded-lg p-4 mb-6">
             <p className="text-sm text-gray-500 mb-1">Current Calling</p>
             <p className="text-3xl font-bold text-gray-800">
-              {callingNumber ? `#${callingNumber}` : "--"}
+              {callingNumbers.length > 0 ? `#${callingNumbers.join(", #")}` : "--"}
             </p>
           </div>
 
@@ -144,7 +143,7 @@ export default function MainPage() {
         <div className="flex justify-between items-center mb-8 border-b pb-4 border-gray-100">
           <span className="text-gray-500">呼出中の番号</span>
           <span className="text-2xl font-bold text-blue-600">
-             {callingNumber ? `#${callingNumber}` : "--"}
+             {callingNumbers.length > 0 ? `#${callingNumbers.join(", #")}` : "--"}
           </span>
         </div>
 
